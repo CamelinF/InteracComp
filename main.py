@@ -1,11 +1,13 @@
-import os,sys,math,time,random
+import os,sys,math,time,random,bisect
 from skmine.datasets.fimi import fetch_file
 
-
-import afficheCT as affCT
-
-
-
+# get cover and frequency of pattern m from dataset d 
+def getFreq(d,m):
+    couv=d[m[0]]
+    for i in m:
+        couv=couv.intersection(d[i])
+        #print(f"{m} à uen couv de {len(couv)}")
+    return couv,len(couv)
 
 # OBTENTION DU DECODAGE de dataFile 
 # FALSE => original to  Krimp,  True => Krimp to original
@@ -34,6 +36,16 @@ def getDecodage(dataFile,sens):
             dico[items[i]]=alphabet[i]
     return dico
 
+
+def dataTransToDataItem(data):
+    dataI={}
+    for t in range(len(data)):
+        for i in data[t]:
+            if i in dataI:
+                dataI[i].add(t)
+            else:
+                dataI[i]={t}
+    return dataI
 # getting codetable CT from fileNamCT for dataset fileNamD
 def getCT(fileNamD,fileNamCT):
     dicoK= getDecodage(fileNamD,True)
@@ -42,7 +54,8 @@ def getCT(fileNamD,fileNamCT):
     s=f.readline()
     s=f.readline()
     splitS=s.split()
-    CT=[]
+    CTD=[]
+    CTK=[]
     while s!="":
         itemset=[]
         motif=[]
@@ -51,22 +64,27 @@ def getCT(fileNamD,fileNamCT):
             itemset.append(int(item))
             motif.append(dicoK[int(item)])
         itemset.sort()
+        motif.sort
         tmp=splitS[-1].split(",")[0]
         tmpp=int(tmp.split("(")[1])
         tmp=splitS[-1].split(",")[1]
         freq=int(tmp.split(")")[0])
-        #couv,freq=getFreq(dataI,motif)
         if len(motif)>1:
-            CT.append([freq,len(itemset),itemset])
+            CTK.append([freq,len(itemset),itemset])
+            CTD.append([freq,len(itemset),motif])
         s=f.readline()
         splitS=s.split()
     f.close()
-    return CT
+    return CTK,CTD
+
 if __name__ == "__main__":
 
     fileNameData=str(sys.argv[1])
     fileNameCT=str(sys.argv[2])
     data=fetch_file(f'datasets/{fileNameData}.dat',int_values=True)
-    CT=affCT.getCT(fileNameData,fileNameCT)
-    for i in CT:
-        print(i)
+    dataI=dataTransToDataItem(data)
+    CTK,CTD=getCT(fileNameData,fileNameCT)
+    for i in CTD:
+        couv,freqM=getFreq(dataI,i[2])
+        print(f"frequence K {i[0]} vs true frequence {freqM}")
+       # print(i)
