@@ -10,7 +10,7 @@ from scipy.stats import spearmanr,kendalltau
 data=["hepatitis","chess","mushroom","retail","splice1","eisen","pumsb","pumsb_star","connect","weatherAUS","twitter","dota"]
 data=["hepatitis"]
 # config [c nb Trans,n nb iter,f seuil freq, k taille Requete]
-config=[[10,25,20,10]]#,[10,25,20,5]]
+config=[[10,25,20,5]]#,[10,25,20,10]]
 temps=["Total","Sample","Krimp","Learn","Req","Weight"]
 Paires=["Partiel","Total"]
 regularization=["AvecL1"]#"SansL1",
