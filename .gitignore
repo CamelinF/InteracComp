@@ -4,7 +4,6 @@ DataUCI.ipynb
 experiments/*
 main.py
 ProgLIn.py
-Krimp/*
 Res/*
 TestdiffScikitvsOPTI.py
 testLearnScikit.py
