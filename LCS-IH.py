@@ -619,7 +619,7 @@ if __name__ == "__main__":
     nbRun=int(sys.argv[3])
     seuilFreq=float(sys.argv[4]) 
     
-    k=5
+    k=int(sys.argv[5]) 
     # Initialisation Krimp
     f=open("compress.conf","r")
     r=open("compress.txt","w")
