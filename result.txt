@@ -1,0 +1,34 @@
+ ---------------------------------- FIC mkIII ---------------------------------
+
+** Processing conf: 'fic.conf'
+ * Verbosity:		2
+ * Max Mem Usage:	8192mb
+ * Priority:		Opzij, opzij, opzij!
+			Maak plaats, maak plaats, maak plaats!
+			Wij hebben ongelovelijke haast!
+
+** Database :: 
+ * File:		twitter.db
+ * Database:		49999t 49999r, 3849923i, 34191946.78bits
+ * 			pruned below support 0, maximum set length 77
+ * Alphabet:		1511 items
+ * Internal datatype:	128bit bitmap
+ ** WARNING : |ab| > 128 : won't fit in BM128, using Uint16 **
+
+
+** ItemSetCollection ::
+ * Retrieved:		twitter-closed-2d.isc
+ * # Sets:		537 (hd)
+
+** Compression :: 
+ * Experiment tag	twitter-closed-2d-pop-20250802070014
+ * Algorithm:		coverpartial post-accept-prune
+ * Candidates:		537p
+ * Start:		(1511a,0u,3849923,34191947,38390,34230337)
+ - Progress:		0% (0) ? c/s  		 \ Progress:		1% (6) ? c/s  		 | Progress:		2% (11) ? c/s  		 / Progress:		3% (17) ? c/s  		 - Progress:		4% (22) ? c/s  		 \ Progress:		5% (27) ? c/s  		 | Progress:		6% (33) ? c/s  		 / Progress:		7% (38) ? c/s  		 - Progress:		8% (43) ? c/s  		 \ Progress:		9% (49) ? c/s  		 | Progress:		10% (54) ? c/s  		 / Progress:		11% (60) ? c/s  		 - Progress:		12% (65) ? c/s  		 \ Progress:		13% (70) ? c/s  		 | Progress:		14% (76) ? c/s  		 / Progress:		15% (81) ? c/s  		 - Progress:		16% (86) ? c/s  		 \ Progress:		17% (92) ? c/s  		 | Progress:		18% (97) ? c/s  		 / Progress:		19% (103) ? c/s  		 - Progress:		20% (108) ? c/s  		 \ Progress:		21% (113) ? c/s  		 | Progress:		22% (119) ? c/s  		 / Progress:		23% (124) ? c/s  		 - Progress:		24% (129) ? c/s  		 \ Progress:		25% (135) ? c/s  		 | Progress:		26% (140) ? c/s  		 / Progress:		27% (145) ? c/s  		 - Progress:		28% (151) ? c/s  		 \ Progress:		29% (156) ? c/s  		 | Progress:		30% (162) ? c/s  		 / Progress:		31% (167) ? c/s  		 - Progress:		32% (172) ? c/s  		 \ Progress:		33% (178) ? c/s  		 | Progress:		34% (183) ? c/s  		 / Progress:		35% (188) ? c/s  		 - Progress:		36% (194) ? c/s  		 \ Progress:		37% (199) ? c/s  		 | Progress:		38% (205) ? c/s  		 / Progress:		39% (210) ? c/s  		 - Progress:		40% (215) ? c/s  		 \ Progress:		41% (221) ? c/s  		 | Progress:		42% (226) ? c/s  		 / Progress:		43% (231) ? c/s  		 - Progress:		44% (237) ? c/s  		 \ Progress:		45% (242) ? c/s  		 | Progress:		46% (248) ? c/s  		 / Progress:		47% (253) ? c/s  		 - Progress:		48% (258) ? c/s  		 \ Progress:		49% (264) ? c/s  		 | Progress:		50% (269) ? c/s  		 / Progress:		51% (274) ? c/s  		 - Progress:		52% (280) ? c/s  		 \ Progress:		53% (285) ? c/s  		 | Progress:		54% (290) ? c/s  		 / Progress:		55% (296) ? c/s  		 - Progress:		56% (301) ? c/s  		 \ Progress:		57% (307) ? c/s  		 | Progress:		58% (312) ? c/s  		 / Progress:		59% (317) ? c/s  		 - Progress:		60% (323) ? c/s  		 \ Progress:		61% (328) ? c/s  		 | Progress:		62% (333) ? c/s  		 / Progress:		63% (339) ? c/s  		 - Progress:		64% (344) ? c/s  		 \ Progress:		65% (350) ? c/s  		 | Progress:		66% (355) ? c/s  		 / Progress:		67% (360) ? c/s  		 - Progress:		68% (366) ? c/s  		 \ Progress:		69% (371) ? c/s  		 | Progress:		70% (376) ? c/s  		 / Progress:		71% (382) ? c/s  		 - Progress:		72% (387) ? c/s  		 \ Progress:		73% (393) ? c/s  		 | Progress:		74% (398) ? c/s  		 / Progress:		75% (403) ? c/s  		 - Progress:		76% (409) ? c/s  		 \ Progress:		77% (414) ? c/s  		 | Progress:		78% (419) ? c/s  		 / Progress:		79% (425) ? c/s  		 - Progress:		80% (430) ? c/s  		 \ Progress:		81% (435) ? c/s  		 | Progress:		82% (441) ? c/s  		 / Progress:		83% (446) ? c/s  		 - Progress:		84% (452) ? c/s  		 \ Progress:		85% (457) ? c/s  		 | Progress:		86% (462) ? c/s  		 / Progress:		87% (468) ? c/s  		 - Progress:		88% (473) ? c/s  		 \ Progress:		89% (478) ? c/s  		 | Progress:		90% (484) ? c/s  		 / Progress:		91% (489) ? c/s  		 - Progress:		92% (495) ? c/s  		 \ Progress:		93% (500) ? c/s  		 | Progress:		94% (505) ? c/s  		 / Progress:		95% (511) ? c/s  		 - Progress:		96% (516) ? c/s  		 \ Progress:		97% (521) ? c/s  		 | Progress:		98% (527) ? c/s  		 / Progress:		99% (532) ? c/s  		 * Time:    		Compressing the database took 12.941497 seconds.		
+ * Result:		(1511a,501u,2368987,23031032,158989,23190021)
+
+ * Check results in:	/home/camelinf/IdeaProjects/These/InteractComp/InteracComp/experiments/twitter24/compress/
+
+Task `main`, command `compress` finished. This took 14 seconds.
+
