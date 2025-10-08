@@ -13,3 +13,5 @@ graph.py
 Krimp/bin/_fic.log
 _fic.log
 compress.conf
+Krimp/bin/datadir.conf
+result.txt
