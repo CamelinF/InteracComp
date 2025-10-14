@@ -8,11 +8,12 @@ from sklearn.linear_model import SGDClassifier
 from scipy.stats import spearmanr,kendalltau
 
 data=["hepatitis","chess","mushroom","retail","splice1","eisen","pumsb","pumsb_star","connect","weatherAUS","twitter","dota"]
-data=["hepatitis"]
+data=["weatherAUS"]#,"chess","mushroom"]
 # config [c nb Trans,n nb iter,f seuil freq, k taille Requete]
 config=[[10,25,20,5]]#,[10,25,20,10]]
 temps=["Total","Sample","Krimp","Learn","Req","Weight"]
 Paires=["Partiel","Total"]
+# Paires=["Total"]
 regularization=["AvecL1"]#"SansL1",
 # OBTENTION DU DECODAGE
 # sens ==FALSE => original vers Krimp, sens True => Krimp vers original
@@ -165,7 +166,8 @@ for d in data:
                 print("             Gettings Test set")
                 timeAnalyse=time.time()
                 allItemsets=[]
-                for run in [8,16,24]:#range(c[1]):
+                indCandidatsRun=[]
+                for run in [8,16,20,24]:#range(c[1]):
                     f=open(f"Res/SizeRequest{c[3]}/{regu}/Paires_{p}/c{c[0]}n{c[1]}f{c[2]}/{d}/Candidates/run{run}.isc")
                     s=f.readline()
                     s=f.readline()
@@ -198,12 +200,14 @@ for d in data:
                             itemsetFeatures.append(len(itemset))
                             motifs.append([surprise,np.array(itemsetFeatures) @ np.array(weightLearned),itemsetFeatures])
                             allItemsets.append(itemset)
+
                         s=f.readline()
                         if s!="":
                             splitS=s.split(":")[1].split()
                         else:
                             splitS=[""]
                     f.close()
+                    indCandidatsRun.append(len(allItemsets))
                 
                 # print(motifs[0])
                 
@@ -211,15 +215,16 @@ for d in data:
                 print(f"        nb Motifs: {len(motifs)}")
                 # score ML = X[i] @ clf.coef_.T + clf.intercept_
                 # Testing as list
-                # scoreTrue=np.array([-motifs[i][0] for i in range(len(motifs))])
-                # scoreLCS=np.array([-motifs[i][1] for i in range(len(motifs))])
-                # listTrue=np.argsort(scoreTrue)
-                # listLCS=np.argsort(scoreLCS)
-                # scoreML=[]
-                # for m in range(len(motifs)):
-                #     x=-(motifs[m][2] @ model.coef_.T+model.intercept_)
-                #     scoreML.append(x[0])
-                # listML=np.argsort(scoreML)
+                scoreTrue=np.array([-motifs[i][0] for i in range(len(motifs))])
+                scoreLCS=np.array([-motifs[i][1] for i in range(len(motifs))])
+                listTrue=np.argsort(scoreTrue)
+                scorePrint=np.sort(scoreTrue)
+                listLCS=np.argsort(scoreLCS)
+                scoreML=[]
+                for m in range(len(motifs)):
+                    x=-(motifs[m][2] @ model.coef_.T+model.intercept_)
+                    scoreML.append(x[0])
+                listML=np.argsort(scoreML)
 
                 # print(f"listTrue :{listTrue[:10]}")
                 # print(f"listLCS :{listLCS[:10]}")
@@ -234,131 +239,159 @@ for d in data:
                 # print(f"Kendall ML : {tau:.4f}")
                 
                 # # Testing with paires by sublist
-                # nbFauxML=0
-                # nbVraiML=0
-                # nbVraiLCS=0
-                # nbFauxLCS=0
-                # listTrue=list(listTrue)
-                # listLCS=list(listLCS)
-                # listML=list(listML)
-                # listDeajVu=set()
-                # for i in range(len(listTrue)):
-                #     motifCheck=listTrue[i]
-                    
-                #     motifsPlusGrand=set(listTrue[0:i])
-                #     motifsPlusPetit=set(listTrue[i+1:len(listTrue)])
-
-                #     indLCS=listLCS.index(motifCheck)
-                #     MPGLCS=set(listLCS[0:indLCS])
-                #     MPPLCS=set(listLCS[indLCS+1:len(listLCS)])
-                #     indML=listML.index(motifCheck)
-                #     MPGML=set(listML[0:indML])
-                #     MPPML=set(listML[indML+1:len(listML)])
-                #     vraiML=(motifsPlusGrand & MPGML).union(motifsPlusPetit & MPPML)-listDeajVu
-                #     fauxML=(motifsPlusGrand ^ MPGML).union(motifsPlusPetit ^ MPPML)-listDeajVu
-                #     vraiLCS=(motifsPlusGrand & MPGLCS).union(motifsPlusPetit & MPPLCS)-listDeajVu
-                #     fauxLCS=(motifsPlusGrand ^ MPGLCS).union(motifsPlusPetit ^ MPPLCS)-listDeajVu
-                #     nbVraiML+=len(vraiML)
-                #     nbFauxML+=len(fauxML)
-                #     nbVraiLCS+=len(vraiLCS)
-                #     nbFauxLCS+=len(fauxLCS)
-                #     listDeajVu.add(motifCheck)
-
-                # print("nbVraiML: ",nbVraiML)
-                # print("nbFauxML: ",nbFauxML)
-                # print("nbVraiLCS: ",nbVraiLCS)
-                # print("nbFauxLCS: ",nbFauxLCS)
-                # print(f" temps passé : {time.time()-timeAnalyse}")
-                # Testing with paires
-                timeAnalyse=time.time()
                 nbFauxML=0
                 nbVraiML=0
                 nbVraiLCS=0
                 nbFauxLCS=0
-                
-                nbp=np.round(len(motifs)*(len(motifs)+1)/2)
-                upd=5
-                print(f"nb Motifs : {len(motifs)}")
-                print(f"nb Paires à test {nbp}")
-                compt=0
-                dictPairesPredLCS=dict()
-                dictPairesPredML=dict()
-                for i in range(len(motifs)):
-                    dictPairesPredLCS[i]=[]
-                    dictPairesPredML[i]=[]
-                for i in range(len(motifs)):
-                    for j in range(i+1,len(motifs)):
-                        compt+=1
-                        if compt % np.round(nbp/upd) ==0:
-                            print(f"un {upd}ieme de fait")
-                            print(f"    temps passé : {time.time()-timeAnalyse}")
-                        y_true=motifs[i][0]>=motifs[j][0]
-                        
-                        Xi=np.array(motifs[i][2])
-                        Xj=np.array(motifs[j][2])
-                        # print(f"Xi :{Xi}, {len(Xi)}")
-                        # print(f"Xj :{Xj}, {len(Xj)}")
-                        
-                        pairesTest=Xi-Xj
-                        y_predLCS=(np.array(pairesTest) @ np.array(weightLearned))>0
-                        if not(y_predLCS):
-                             dictPairesPredLCS[i].append(j)
-                        else:
-                            dictPairesPredLCS[j].append(i)
-                        # print(f"Paires test: {pairesTest}, {len(pairesTest)}")
-                        y_predML=model.predict([pairesTest])
-                        if not(y_predML):
-                             dictPairesPredML[i].append(j)
-                        else:
-                            dictPairesPredML[j].append(i)
-                        # fLCS=open(f"Res/SizeRequest{c[3]}/{regu}/Paires_{p}/c{c[0]}n{c[1]}f{c[2]}/{d}/LCSFaux","w")
-                        # fML=open(f"Res/SizeRequest{c[3]}/{regu}/Paires_{p}/c{c[0]}n{c[1]}f{c[2]}/{d}/MLFaux","w")
-                        if y_true == y_predLCS:
-                            nbVraiLCS+=1
-                        else:
-                            nbFauxLCS+=1
-                            # fLCS.write(f" LCS ce trompe sur {i} et {j}")
-                        if y_true == y_predML[0]:
-                            nbVraiML+=1
-                        else:
-                            nbFauxML+=1
-                            # fML.write(f" ML ce trompe sur {i} et {j}")
-                        # fML.close()
-                        # fLCS.close()
-                scoreTrue=np.array([-motifs[i][0] for i in range(len(motifs))])
-                listTrue=np.argsort(scoreTrue)
-                listLCS=np.zeros(len(motifs),int)
-                listML=np.zeros(len(motifs),int)
-                for i in dictPairesPredLCS:
-                    listLCS[len(dictPairesPredLCS[i])]=i
-                for i in dictPairesPredML:
-                    listML[len(dictPairesPredML[i])]=i
+                listTrue=list(listTrue)
+                listLCS=list(listLCS)
+                listML=list(listML)
+                listDeajVu=set()
+                for i in range(len(listTrue)):
+                    motifCheck=listTrue[i]
+                    
+                    motifsPlusGrand=set(listTrue[0:i])
+                    motifsPlusPetit=set(listTrue[i+1:len(listTrue)])
 
-                print(f"Pour {d} {regu} et config {c} sur les paires {p} :")
+                    indLCS=listLCS.index(motifCheck)
+                    MPGLCS=set(listLCS[0:indLCS])
+                    MPPLCS=set(listLCS[indLCS+1:len(listLCS)])
+                    indML=listML.index(motifCheck)
+                    MPGML=set(listML[0:indML])
+                    MPPML=set(listML[indML+1:len(listML)])
+                    vraiML=(motifsPlusGrand & MPGML).union(motifsPlusPetit & MPPML)-listDeajVu
+                    fauxML=(motifsPlusGrand ^ MPGML).union(motifsPlusPetit ^ MPPML)-listDeajVu
+                    vraiLCS=(motifsPlusGrand & MPGLCS).union(motifsPlusPetit & MPPLCS)-listDeajVu
+                    fauxLCS=(motifsPlusGrand ^ MPGLCS).union(motifsPlusPetit ^ MPPLCS)-listDeajVu
+                    nbVraiML+=len(vraiML)
+                    nbFauxML+=len(fauxML)
+                    nbVraiLCS+=len(vraiLCS)
+                    nbFauxLCS+=len(fauxLCS)
+                    listDeajVu.add(motifCheck)
+
+
+                print(f"Pour {d} {regu} et config {c} sur les paires {p}  avec tests scores:")
                 print(f"    listTrue :{listTrue[:10]}")
+                # print(f"    listTrue :{scorePrint[:10]}")
+                print(f"    surpriselistTrue :",[round(motifs[indM][0],3) for indM in listTrue[:10]])
                 print(f"    listLCS :{listLCS[:10]}")
-                print(f"    listML :{listML[:10]}")
-                rho, _ = spearmanr(listTrue,listLCS)
-                print(f"    Spearman LCS : {rho:.4f}")
-                rho, _ = spearmanr(listTrue, listML)
-                print(f"    Spearman ML : {rho:.4f}")
-                tau, _ = kendalltau(listTrue, listLCS)
-                print(f"    Kendal LCS : {tau:.4f}")
-                tau, _ = kendalltau(listTrue, listML)
-                tau, _ = kendalltau(listTrue, listML)
-                print(f"    Kendall ML: {tau:.4f}")
-
-                rho, _ = spearmanr(listTrue[:10],listLCS[:10])
-                print(f"    Spearman Top 10LCS : {rho:.4f}")
-                rho, _ = spearmanr(listTrue[:10], listML[:10])
-                print(f"    Spearman top 10 ML : {rho:.4f}")
-                tau, _ = kendalltau(listTrue[:10], listLCS[:10])
-                print(f"    Kendal Top 10 LCS : {tau:.4f}")
-                tau, _ = kendalltau(listTrue[:10], listML[:10])
-                print(f"    Kendall Top 10 ML : {tau:.4f}")
-                print("    nbVraiML: ",nbVraiML)
-                print("    nbFauxML: ",nbFauxML)
-                print("    nbVraiLCS: ",nbVraiLCS)
-                print("    nbFauxLCS: ",nbFauxLCS)
-                print(f"temps passé : {time.time()-timeAnalyse}")
+                surpLCS=[round(motifs[indM][0],3) for indM in listLCS[:10]]
                 
+                print(f"    listML :{listML[:10]}")
+                surpML=[round(motifs[indM][0],3) for indM in listML[:10]]
+               
+                
+                
+                print(f"    suprise LCS :{surpLCS} mean :",np.mean(surpLCS))
+                print(f"    suprise ML :{surpML} mean :",np.mean(surpML))
+
+                print("    recall@10 LCS: " , len(set(listLCS[:10])& set(listTrue[:10]))/10)
+                print("    recall@10 ML: ",len(set(listML[:10])& set(listTrue[:10]))/10)
+
+                print("     nbVraiLCS: ",nbVraiLCS)
+                print("     nbFauxLCS: ",nbFauxLCS)
+                print("     nbVraiML: ",nbVraiML)
+                print("     nbFauxML: ",nbFauxML)
+                
+                print(f"    temps passé : {time.time()-timeAnalyse}")
+                # Testing with paires
+                
+                
+                # timeAnalyse=time.time()
+                # nbFauxML=0
+                # nbVraiML=0
+                # nbVraiLCS=0
+                # nbFauxLCS=0
+                
+                # nbp=np.round(len(motifs)*(len(motifs)+1)/2)
+                # upd=5
+                # print(f"nb Motifs : {len(motifs)}")
+                # print(f"nb Paires à test {nbp}")
+                # compt=0
+                # dictPairesPredLCS=dict()
+                # dictPairesPredML=dict()
+                # for i in range(len(motifs)):
+                #     dictPairesPredLCS[i]=[]
+                #     dictPairesPredML[i]=[]
+                # for i in range(len(motifs)):
+                #     for j in range(i+1,len(motifs)):
+                #         compt+=1
+                #         if compt % np.round(nbp/upd) ==0:
+                #             print(f"un {upd}ieme de fait")
+                #             print(f"    temps passé : {time.time()-timeAnalyse}")
+                #         y_true=motifs[i][0]>=motifs[j][0]
+                        
+                #         Xi=np.array(motifs[i][2])
+                #         Xj=np.array(motifs[j][2])
+                #         # print(f"Xi :{Xi}, {len(Xi)}")
+                #         # print(f"Xj :{Xj}, {len(Xj)}")
+                        
+                #         pairesTest=Xi-Xj
+                #         y_predLCS=(np.array(pairesTest) @ np.array(weightLearned))>0
+                #         if not(y_predLCS):
+                #              dictPairesPredLCS[i].append(j)
+                #         else:
+                #             dictPairesPredLCS[j].append(i)
+                #         # print(f"Paires test: {pairesTest}, {len(pairesTest)}")
+                #         y_predML=model.predict([pairesTest])
+                #         if not(y_predML):
+                #              dictPairesPredML[i].append(j)
+                #         else:
+                #             dictPairesPredML[j].append(i)
+                #         # fLCS=open(f"Res/SizeRequest{c[3]}/{regu}/Paires_{p}/c{c[0]}n{c[1]}f{c[2]}/{d}/LCSFaux","w")
+                #         # fML=open(f"Res/SizeRequest{c[3]}/{regu}/Paires_{p}/c{c[0]}n{c[1]}f{c[2]}/{d}/MLFaux","w")
+                #         if y_true == y_predLCS:
+                #             nbVraiLCS+=1
+                #         else:
+                #             nbFauxLCS+=1
+                #             # fLCS.write(f" LCS ce trompe sur {i} et {j}")
+                #         if y_true == y_predML[0]:
+                #             nbVraiML+=1
+                #         else:
+                #             nbFauxML+=1
+                #             # fML.write(f" ML ce trompe sur {i} et {j}")
+                #         # fML.close()
+                #         # fLCS.close()
+                # scoreTrue=np.array([-motifs[i][0] for i in range(len(motifs))])
+                # listTrue=np.argsort(scoreTrue)
+                # listLCS=np.zeros(len(motifs),int)
+                # listML=np.zeros(len(motifs),int)
+                # for i in dictPairesPredLCS:
+                #     listLCS[len(dictPairesPredLCS[i])]=i
+                # for i in dictPairesPredML:
+                #     listML[len(dictPairesPredML[i])]=i
+
+                # print(f"Pour {d} {regu} et config {c} sur les paires {p}  avec tests paires:")
+                # print(f"    listTrue :{listTrue[:10]}")
+                # print(f"    surpriselistTrue :",[round(motifs[indM][0],3) for indM in listTrue[:10]])
+                # print(f"    listLCS :{listLCS[:10]}")
+                # surpLCS=[round(motifs[indM][0],3) for indM in listLCS[:10]]
+                # print(f"    suprise LCS :{surpLCS} mean :",np.mean(surpLCS))
+                # print("    recall@10 LCS: " , len(set(listLCS[:10])& set(listTrue[:10]))/10)
+                # print(f"    listML :{listML[:10]}")
+                # surpML=[round(motifs[indM][0],3) for indM in listML[:10]]
+                # print(f"    suprise ML :{surpML} mean :",np.mean(surpML))
+                # print("    recall@10 ML: ",len(set(listML[:10])& set(listTrue[:10]))/10)
+                # # rho, _ = spearmanr(listTrue,listLCS)
+                # # print(f"    Spearman LCS : {rho:.4f}")
+                # # rho, _ = spearmanr(listTrue, listML)
+                # # print(f"    Spearman ML : {rho:.4f}")
+                # # tau, _ = kendalltau(listTrue, listLCS)
+                # # print(f"    Kendal LCS : {tau:.4f}")
+                # # tau, _ = kendalltau(listTrue, listML)
+                # # print(f"    Kendall ML: {tau:.4f}")
+
+                # # rho, _ = spearmanr(listTrue[:10],listLCS[:10])
+                # # print(f"    Spearman Top 10LCS : {rho:.4f}")
+                # # rho, _ = spearmanr(listTrue[:10], listML[:10])
+                # # print(f"    Spearman top 10 ML : {rho:.4f}")
+                # # tau, _ = kendalltau(listTrue[:10], listLCS[:10])
+                # # print(f"    Kendal Top 10 LCS : {tau:.4f}")
+                # # tau, _ = kendalltau(listTrue[:10], listML[:10])
+                # # print(f"    Kendall Top 10 ML : {tau:.4f}")
+                # print("    nbVraiML: ",nbVraiML)
+                # print("    nbFauxML: ",nbFauxML)
+                # print("    nbVraiLCS: ",nbVraiLCS)
+                # print("    nbFauxLCS: ",nbFauxLCS)
+                # print(f"temps passé : {time.time()-timeAnalyse}")
+                print(f"indice candidats run : {indCandidatsRun}")
