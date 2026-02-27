@@ -8,13 +8,13 @@ from sklearn.linear_model import SGDClassifier
 from scipy.stats import spearmanr,kendalltau
 
 data=["hepatitis","chess","mushroom","retail","splice1","eisen","pumsb","pumsb_star","connect","weatherAUS","twitter","dota"]
-data=["weatherAUS"]#,"chess","mushroom"]
+data=["hepatitis","chess","mushroom"]#,"chess","mushroom"]
 # config [c nb Trans,n nb iter,f seuil freq, k taille Requete]
-config=[[10,25,20,5]]#,[10,25,20,10]]
+config=[[10,25,20,5]]#,[10,25,20,5]]
 temps=["Total","Sample","Krimp","Learn","Req","Weight"]
 Paires=["Partiel","Total"]
-# Paires=["Total"]
-regularization=["AvecL1"]#"SansL1",
+Paires=["Partiel"]
+algorithms=["SGD","Moi"]#"SansL1",
 # OBTENTION DU DECODAGE
 # sens ==FALSE => original vers Krimp, sens True => Krimp vers original
 def getDecodage(dataFile,sens):
@@ -103,8 +103,8 @@ def getFreq(d,m):
 
 for d in data:
     print(f"Pour {d}:")
-    for regu in regularization:
-        print(f" {regu} :")
+    for algo in algorithms:
+        print(f" {algo} :")
         for c in config:
             #print(f"    avec la config {c}")
             for p in Paires:
@@ -119,13 +119,13 @@ for d in data:
                             dataI[i]={t}
                 #print(f"        Get Feedbacks with pairs {p}")
                 feedbacks=[]
-                f=fetch_file(f"Res/SizeRequest{c[3]}/{regu}/Paires_{p}/c{c[0]}n{c[1]}f{c[2]}/{d}/feedbacks.txt",separator=',')
+                f=fetch_file(f"Res/{algo}/SizeRequest{c[3]}/Paires_{p}/c{c[0]}n{c[1]}f{c[2]}/{d}/feedbacks.txt",separator=',')
                 for i in f:
                     x=int(i[0].split('[')[1])
                     y=int(i[1].split(']')[0])
                     feedbacks.append([x,y])
                 
-                f=open(f"Res/SizeRequest{c[3]}/{regu}/Paires_{p}/c{c[0]}n{c[1]}f{c[2]}/{d}/patternShown.txt")
+                f=open(f"Res/{algo}/SizeRequest{c[3]}/Paires_{p}/c{c[0]}n{c[1]}f{c[2]}/{d}/patternShown.txt")
 
                 s=f.readline()
                 motifsFeatures=dict()
@@ -139,7 +139,7 @@ for d in data:
                     motifsFeatures[ind]=features
                     s=f.readline()
                 f.close()
-                f=open(f"Res/SizeRequest{c[3]}/{regu}/Paires_{p}/c{c[0]}n{c[1]}f{c[2]}/{d}/weightLearned.txt")
+                f=open(f"Res/{algo}/SizeRequest{c[3]}/Paires_{p}/c{c[0]}n{c[1]}f{c[2]}/{d}/weightLearned.txt")
                 s=f.readline()
                 splitS=s.split('[')[1].split(']')[0].split(',')
                 weightLearned=[]
@@ -158,7 +158,7 @@ for d in data:
                     # On ajoute aussi l'inverse pour équilibrer
                     X_pairs.append(xj - xi)
                     y_pairs.append(0)
-                model = SGDClassifier(loss="log_loss", penalty="l1", max_iter=1000)
+                model = SGDClassifier(loss="log_loss", penalty="l1", max_iter=10000)
                 model.fit(X_pairs, y_pairs)
                 print(f"Temps learn = {time.time()-timeTrain}")
                 motifs=[]
@@ -167,8 +167,8 @@ for d in data:
                 timeAnalyse=time.time()
                 allItemsets=[]
                 indCandidatsRun=[]
-                for run in [8,16,20,24]:#range(c[1]):
-                    f=open(f"Res/SizeRequest{c[3]}/{regu}/Paires_{p}/c{c[0]}n{c[1]}f{c[2]}/{d}/Candidates/run{run}.isc")
+                for run in range(c[1]): # [8,16,20,24]:
+                    f=open(f"Res/{algo}/SizeRequest{c[3]}/Paires_{p}/c{c[0]}n{c[1]}f{c[2]}/{d}/Candidates/run{run}.isc")
                     s=f.readline()
                     s=f.readline()
                     s=f.readline()
@@ -270,7 +270,7 @@ for d in data:
                     listDeajVu.add(motifCheck)
 
 
-                print(f"Pour {d} {regu} et config {c} sur les paires {p}  avec tests scores:")
+                print(f"Pour {d} {algo} et config {c} sur les paires {p}  avec tests scores:")
                 print(f"    listTrue :{listTrue[:10]}")
                 # print(f"    listTrue :{scorePrint[:10]}")
                 print(f"    surpriselistTrue :",[round(motifs[indM][0],3) for indM in listTrue[:10]])

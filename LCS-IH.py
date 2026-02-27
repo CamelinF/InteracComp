@@ -12,6 +12,7 @@ import numpy as np
 from skmine.datasets.utils import describe
 from skmine.datasets.fimi import fetch_file
 from skmine.itemsets import LCM
+from sklearn.linear_model import SGDClassifier
 from random import sample,random,choices,randint
 import pulp
 from pulp import GUROBI
@@ -122,15 +123,16 @@ def extract(dataFile,dataT,dataI,ensTrans,ensMotif,typeM,minSupp):
                 ensMotif.append([freq/len(dataT),nbI,motifK,couv])
         else:
             nbS=nbS+1
-    r=open(f"Res/{dataFile}/trouve.txt","a")
-    r.write(str(len(newCandidats)-nbS))
-    r.write(",")
-    r.close()
+    #result trouve ajout
+    # r=open(f"Res/{dataFile}/trouve.txt","a")
+    # r.write(str(len(newCandidats)-nbS))
+    # r.write(",")
+    # r.close()
     #print(" on a extraits "+str(len(newCandidats)-nbS))
-    r=open(f"Res/{dataFile}/ajout.txt","a")
-    r.write(str(len(ensMotif)-longEns))
-    r.write(",")
-    r.close()
+    # r=open(f"Res/{dataFile}/ajout.txt","a")
+    # r.write(str(len(ensMotif)-longEns))
+    # r.write(",")
+    # r.close()
     #print(f" Il y a {len(ensMotif)-longEns} nouveaux motifs")
     ensMotif.sort(key=lambda x: (-x[0],-x[1],x[2]))
     #print(" on encode pour Krimp")
@@ -197,7 +199,7 @@ def extractCT(dataFile,dataI,indRun,ensMotifA,dim):
                     motifFeatures.append(1)
                 else:
                     motifFeatures.append(0)    
-            for i in range(dim[1]):
+            for i in sorted(list(dataI.keys())):
                 if i in motif:
                     motifFeatures.append(1)
                 else:
@@ -214,6 +216,7 @@ def extractCT(dataFile,dataI,indRun,ensMotifA,dim):
         x=poids[i]/sumTot
         tailleComp.append(x)
     os.system(f"mv resKrimp.ct Res/{dataFile}/Codetables/run{indRun}.ct")
+    
     
 
     return ensMotif,ensCT,tailleComp
@@ -306,53 +309,71 @@ def get_Feedbacks(request,ensMotif):
                     feedbacks.append([request[j],request[i]])
     return feedbacks
 
-def learn_From_Feedbacks(feedbacks,ensMotif,n_features):
-    model = pulp.LpProblem("RankLearn", pulp.LpMinimize)
-    w = [pulp.LpVariable(f"w_{k}", lowBound=-1, upBound=1) for k in range(n_features)]
-    violations = []
-    epsilon = 1e-3
-    lambda_l1=0.1
-
-    # L1 constraints : u_k ≥ |w_k|
-    # u = [pulp.LpVariable(f"u_{k}", lowBound=0, cat="Continuous") for k in range(n_features)]
-    # for k in range(n_features):
-    #     model += u[k] >= w[k]
-    #     model += u[k] >= -w[k]
+def learn_From_Feedbacks_SGD(feedbacks,ensMotif):
+    X_pairs=[]
+    y_pairs=[]
     for i, j in feedbacks:
-        vij = pulp.LpVariable(f"v_{i}_{j}", cat="Binary")
-        diff = np.array(ensMotif[i][1]) - np.array(ensMotif[j][1])
-        model += pulp.lpSum([w[k] * diff[k] for k in range(n_features)]) >=  epsilon - n_features*2 * vij
-        violations.append(vij)
+        xi, xj = np.array(ensMotif[i][1]) , np.array(ensMotif[j][1])
+        X_pairs.append(xi - xj)   # Si i > j → xi - xj doit avoir score > 0
+        y_pairs.append(1)
+        X_pairs.append(xj - xi)  # On ajoute aussi l'inverse pour équilibrer
+        y_pairs.append(0)
+    model = SGDClassifier(loss="log_loss", penalty="l1", max_iter=3000,tol=1e-3, )
+    model.fit(X_pairs, y_pairs)
+    
+    return model.coef_[0],model.intercept_[0]
 
-    model += pulp.lpSum(violations)#+lambda_l1*pulp.lpSum(u)
-    # model += pulp.lpSum(violations)
+def learn_From_Feedbacks_SCD(weights,feedbacks,ensMotif):
+    d=len(weights)
+    lambdaLearn=1e-6
+    beta=0.25
+    
+    newWeight=[0 for i in range(d)]
+    X_pairs=[]
+    y_pairs=[]
+    for i, j in feedbacks:
+        xi, xj = np.array(ensMotif[i][1]) , np.array(ensMotif[j][1])
+        X_pairs.append(xi - xj)   # Si i > j → xi - xj doit avoir score > 0
+        y_pairs.append(1)
+        X_pairs.append(xj - xi)  # On ajoute aussi l'inverse pour équilibrer
+        y_pairs.append(0)
+    m=len(X_pairs)
+    z=[0 for i in range(m)]
+    for t in range(20):
+        indWeight=np.random.permutation(d)
+        for j in indWeight:
+            optiDeriv=(1/m) * (sum([ (-y_pairs[xi]/(1+np.exp(y_pairs[xi]*z[xi])))*X_pairs[xi][j]     for xi in range(m) if X_pairs[xi][j]!=0])+lambdaLearn )
+            step=max(-newWeight[j] ,- optiDeriv/beta)
+            newWeight[j]+=step
+            for indZ in range(m):
+                z[indZ]+=X_pairs[indZ][j]*step
 
-    optionsG = [
-    #("TimeLimit" , 60.0),
-    ("WLSACCESSID", "146955fd-fb4c-409b-bcd0-7eb0472c8d4b"),
-    ("WLSSECRET", "ae52ec3b-abb7-4028-9d66-285e40efdc7d"),
-    ("LICENSEID", 2610563)
-    ]
-
-    solver = GUROBI(msg=False)
-    status = model.solve(solver)
-
-    w_pulp = np.array([pulp.value(wk) for wk in w])
-    w_pulp= np.array([np.random.uniform(-1, 1) if x is None else x for x in w_pulp], dtype=float)
-
-    return np.round(w_pulp, 3)
-
-
-def get_Request(ensMotif,poidsT,weights,k,prevRequest,alreadyShown):
+    return newWeight,0
+    
+def get_Request(ensMotif,dataDim,weights,k,prevRequest,alreadyShown,l):
     scores=[]
     ensMotifFeatures=[]
 
     for i in ensMotif:
         motifFeatures=i[5] # vecteur_features transac et items
-        motifFeatures.append(i[0])#freq
-        motifFeatures.append(i[1])#len
+        # motifFeatures.append(i[0])#freq
+        # motifFeatures.append(i[1])#len
         # motifFeatures.append(i[4])#compression
-        scores.append(np.dot(motifFeatures,weights))
+
+        # score by multplying two scalar product one from transaction and other one from items
+        score=0
+        for i in range(dataDim[0]):
+            if motifFeatures[i]==1:
+                score+=weights[i]
+        for i in range(dataDim[1]):
+            if motifFeatures[dataDim[0]+i]==1:
+                score+=weights[dataDim[0]+i]
+        scores.append(score)
+        # simple score by scalar product
+        # scores.append(np.dot(motifFeatures,weights))
+
+
+
         ensMotifFeatures.append(motifFeatures)
 
     # get best from preivous feedback :
@@ -360,7 +381,8 @@ def get_Request(ensMotif,poidsT,weights,k,prevRequest,alreadyShown):
         prevMotif=[]
         for i in prevRequest:
             prevMotif.append(alreadyShown[i][0][4])
-        indReq=np.argsort(prevMotif)[-2:][::-1]
+        indReq=np.argsort(prevMotif)[-l:][::-1]
+        # print(indReq)
         request=[]
         for i in indReq:
             request.append(prevRequest[i])
@@ -412,7 +434,7 @@ def show_GraphFeedback(dataFile,prefs,indRun):
     plt.clf()
     plt.close()
 
-def main(dataFile,nbR,nbT,typeM,seuilF,dirCurr,k):
+def main(dataFile,nbR,nbT,typeM,seuilF,dirCurr,k,l):
     
     tempsTotal=time.time()
 
@@ -444,9 +466,11 @@ def main(dataFile,nbR,nbT,typeM,seuilF,dirCurr,k):
         for j in i:
             tailleTmp+=-1*math.log2(len(dataI[j])/sumInit)
         tailleI.append(tailleTmp)
-    
-    # POids appris ( un par transaction + un par item + 1 pour la fréquence + +1 pour la taille + 1 pour la compression)
-    weightLearned=[1]*(len(data)+len(dataI)+1+1)
+    dataDim=[len(data),len(dataI)]
+    # POids appris ( un par transaction + un par item + 1 pour la fréquence + +1 pour la taille )
+    # weightLearned=[1]*(len(data)+len(dataI)+1+1)
+    # POids appris ( un par transaction + un par item )
+    weightLearned=[1]*(len(data)+len(dataI))
     feedbacks=[]
     # Time initialization
     tempsTotalF=[] # initialize at the start to consider previous code into account
@@ -499,11 +523,13 @@ def main(dataFile,nbR,nbT,typeM,seuilF,dirCurr,k):
             f.close()
             os.system("Krimp/bin/krimp > result.txt")
             # print(" Krimp Fait")
+            
             # Krimp extraction
             #ensMotif,ensCT,couvKrimp,tailleComp,ensCTFC=extractCT(dataFile,dataI,i)
 
             # Here ensMotif now has 6 entries freq,len,itemset,cover,user_score, vector_Features
             ensMotif,ensCT,tailleComp=extractCT(dataFile,dataI,i,ensMotif,[len(data),len(dataI)])
+            os.system(f"mv data/candidates/{dataFile}-{typeM}-{minSupp}d.isc Res/{dataFile}/Candidates/run{i}.isc")
             tempsKrimpF.append(time.time() - tempsKrimp)
 
             if i<nbR-1:
@@ -519,7 +545,7 @@ def main(dataFile,nbR,nbT,typeM,seuilF,dirCurr,k):
             tempsReq=time.time()
 
             # return k motifs de ensCT
-            request,alreadyShown=get_Request(ensMotif,poidsT,weightLearned,k,request,alreadyShown)
+            request,alreadyShown=get_Request(ensMotif,dataDim,weightLearned,k,request,alreadyShown,l)
             # print(f"request:{request}")
             
             newFeedbacks=get_Feedbacks(request,alreadyShown)
@@ -530,19 +556,44 @@ def main(dataFile,nbR,nbT,typeM,seuilF,dirCurr,k):
             for j in newFeedbacks:
                 # print(j)
                 feedbacks.append(j)
-                f.write(f"{j}\n")
+                # f.write(f"{j}\n")
+            f.write(f"{newFeedbacks}\n")
             f.close() 
             # print(f"feedbacks:{feedbacks}")
             tempsReqF.append(time.time()-tempsReq)
             tempsLearn=time.time()
-            weightLearned=learn_From_Feedbacks(feedbacks,alreadyShown,len(weightLearned))
-            # print(f"weightLearned:{weightLearned}")
+            #weightLearned=learn_From_Feedbacks(feedbacks,alreadyShown,len(weightLearned))
+            #weightLearned,biais=learn_From_Feedbacks_SGD(feedbacks,alreadyShown)
+            weightLearned,biais=learn_From_Feedbacks_SCD(weightLearned,feedbacks,alreadyShown)
+            f=open(f"Res/{dataFile}/weightLearned.txt","a")
+            f.write(f"[{weightLearned[0]}")
+            for indWeight in range(1,len(weightLearned)):
+                f.write(f",{weightLearned[indWeight]}")
+            f.write(f"],{biais}")
+            f.write("\n")
+            f.close() 
+            #print(f"weightLearned:{weightLearned}")
+
+            # Normalisation by sum 
+            # biaisPourPositif= (abs(min(weightLearned))+1)
+            # for j in range(len(weightLearned)):
+            #     weightLearned[j]=weightLearned[j]+biaisPourPositif
+            # sommeW=sum(weightLearned)
+            # for j in range(len(weightLearned)):
+            #     weightLearned[j]=weightLearned[j]/sommeW
+
+            # normalisation by sigmoide
+            for j in range(len(weightLearned)):
+                weightLearned[j]= 1/(1+np.exp( weightLearned[j]))
             for j in range(len(poidsT)):
-                poidsT[j]=poidsT[j]*(1.1+weightLearned[j])
+                #poidsT[j]=poidsT[j]*(1.1+weightLearned[j])
+                poidsT[j]=poidsT[j]*weightLearned[j]
+
+
+
             sommeP=sum(poidsT)
             for j in range(len(poidsT)):
                 poidsT[j]=poidsT[j]/sommeP
-
             # print(f"PoidsT:{poidsT}")
             tempsLearnF.append(time.time()-tempsLearn)
             show_GraphFeedback(dataFile,feedbacks,i)
@@ -565,7 +616,7 @@ def main(dataFile,nbR,nbT,typeM,seuilF,dirCurr,k):
                         stop=False
             tmpTaille.append(int(splitS[2].split(',')[5].split(')')[0]))
             f.close()
-        os.system(f"mv data/candidates/{dataFile}-{typeM}-{minSupp}d.isc Res/{dataFile}/Candidates/run{i}.isc")
+        
         i=i+1
         tempsTotalF.append(time.time()-tempsTotal)
         tempsTotal=time.time()
@@ -598,13 +649,7 @@ def main(dataFile,nbR,nbT,typeM,seuilF,dirCurr,k):
     f.write(str(tmpTaille))
     f.write("\n")
     f.close()
-    f=open(f"Res/{dataFile}/weightLearned.txt","a")
-    f.write(f"[{weightLearned[1]}")
-    for i in range(1,len(weightLearned)):
-        f.write(f",{weightLearned[i]}")
-    f.write("]")
-    f.write("\n")
-    f.close() 
+    
     print(len(alreadyShown[1]))
     f=open(f"Res/{dataFile}/patternShown.txt",'a')
     for i in range(len(alreadyShown)):
@@ -620,6 +665,7 @@ if __name__ == "__main__":
     seuilFreq=float(sys.argv[4]) 
     
     k=int(sys.argv[5]) 
+    l=int(sys.argv[6])
     # Initialisation Krimp
     f=open("compress.conf","r")
     r=open("compress.txt","w")
@@ -651,13 +697,13 @@ if __name__ == "__main__":
     os.system(f"mkdir Res/{data}/Candidates")
     os.system(f"mkdir Res/{data}/Codetables")
     os.system(f"mkdir Res/{data}/GraphPrefs")
-    f=open(f"Res/{data}/ajout.txt","w")
-    #f.write(f"{tailleS}-{nbRun}-{seuilFreq}:")
-    f.close()
-    f=open(f"Res/{data}/trouve.txt","w")
-    #f.write(f"{tailleS}-{nbRun}-{seuilFreq}:")
-    f.close()
+    # f=open(f"Res/{data}/ajout.txt","w")
+    # #f.write(f"{tailleS}-{nbRun}-{seuilFreq}:")
+    # f.close()
+    # f=open(f"Res/{data}/trouve.txt","w")
+    # #f.write(f"{tailleS}-{nbRun}-{seuilFreq}:")
+    # f.close()
 
 
     currDir=os.getcwd()
-    main(data,nbRun,tailleS,"closed",seuilFreq,currDir,k)
+    main(data,nbRun,tailleS,"closed",seuilFreq,currDir,k,l)
